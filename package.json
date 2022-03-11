@@ -1,0 +1,28 @@
+{
+  "name": "skitty",
+  "version": "1.0.0",
+  "description": "A side project to help people find roommates in new places",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "server": "nodemon server/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daniel-black/skitty.git"
+  },
+  "author": "Daniel Black",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/daniel-black/skitty/issues"
+  },
+  "homepage": "https://github.com/daniel-black/skitty#readme",
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "express": "^4.17.3",
+    "mongoose": "^6.2.5"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  }
+}
