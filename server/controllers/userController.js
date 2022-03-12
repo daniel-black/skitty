@@ -71,21 +71,21 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const getUserProfile = asyncHandler(async (req, res) => {
-
+  res.status(200).json(req.user);
 });
 
-const editUserProfile = asyncHandler(async (req, res) => {
+// const editUserProfile = asyncHandler(async (req, res) => {
+//   res.json({msg: 'edit user profile', user: req.user})
+// });
 
-});
-
-const deleteUserProfile = asyncHandler(async (req, res) => {
-
-});
+// const deleteUserProfile = asyncHandler(async (req, res) => {
+//   res.json({msg: 'delete user profile', user: req.user})
+// });
 
 module.exports = { 
   registerUser, 
   loginUser, 
   getUserProfile,
-  editUserProfile,
-  deleteUserProfile
+  // editUserProfile,
+  // deleteUserProfile
 };
