@@ -4,67 +4,98 @@ const UserSchema = mongoose.Schema({
   firstName: {
     type: String,
     lowercase: true,
+    trim: true,
     required: [true, 'Please add a first name']
   },
   lastName: {
     type: String,
     lowercase: true,
+    trim: true,
     required: [true, 'Please add a last name']
   },
   email: {
     type: String,
     lowercase:true,
+    trim: true,
     unique: true,
+    index: true,
     required: [true, 'Please add an email']
+  },
+  phone: {
+    type: String,
   },
   password: {
     type: String,
+    trim: true,
     required: [true, 'Please add a password']
-  }
+  },
+  personalDetails: {
+    age: {
+      type: Number,
+      min: 18,
+      max:30,
+      required: true
+    },
+    bio: {
+      type: String,
+      maxLength: 500 
+    },
+    gender: {
+      type: String,
+      lowercase: true
+    },
+    education: {
+      school: {
+        type: String,
+        lowercase: true
+      },
+      graduated: {
+        type: Boolean
+      }
+    },
+    work: {
+      employed: {
+        type: Boolean
+      }, 
+      title: {
+        type: String,
+        lowercase: true
+      },
+      company: {
+        type: String,
+        lowercase: true
+      }
+    },
+    socials: {
+      instagram: String,
+      facebook: String,
+      linkedin: String,
+      snapchat: String,
+    }
+  },
+  locationDetails: {
+    origin: {
+      state: {
+        type: String,
+        lowercase: true
+      },
+      city: {
+        type: String,
+        lowercase: true
+      }
+    },
+    targets: [{
+      type: String,
+      lowercase: true
+    }],
+
+
+  },
+  leads: [{type: mongoose.Schema.Types.ObjectId}],
+  fullAccess: [{type: mongoose.Schema.Types.ObjectId}]
 }, 
 {
   timestamps: true
 });
 
 module.exports = mongoose.model('User', UserSchema);
-
-// IMPLEMENT A STRIPPED DOWN BASIC VERSION FIRST
-// const UserSchema = mongoose.Schema({
-//   firstName: {
-//     type: String,
-//     lowercase: true,
-//     required: [true, 'Please add a first name'],
-//   },
-//   lastName: {
-//     type: String,
-//     lowercase: true,
-//     required: [true, 'Please add a last name']
-//   },
-//   age: {
-//     type: Number,
-//     min: 18,
-//     max:30,
-//     required: true
-//   },
-//   bio: {
-//     type: String,
-//     maxLength: 500 
-//   },
-//   gender: {
-//     type: String,
-//     lowercase: true
-//   },
-//   email: {
-//     type: String,
-//     lowercase: true
-//   },
-//   phone: String,
-//   education: String,
-//   occupation: String,
-//   origin: String,
-//   targets: [{type: String}],
-//   hidden: Boolean,
-// },
-// {
-//   timestamps: true
-// });

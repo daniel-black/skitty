@@ -28,9 +28,9 @@ const registerUser = asyncHandler(async (req, res) => {
 
   // create a new user document
   await User.create({
-    firstName: firstName.toLowerCase(),
-    lastName: lastName.toLowerCase(),
-    email: email.toLowerCase(),
+    firstName,
+    lastName,
+    email,
     password: hashedPassword
   }, (err, user) => {
     if (err) throw new Error(err.message);
