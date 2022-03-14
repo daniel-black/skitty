@@ -74,18 +74,79 @@ const getUserProfile = asyncHandler(async (req, res) => {
   res.status(200).json(req.user);
 });
 
-// const editUserProfile = asyncHandler(async (req, res) => {
-//   res.json({msg: 'edit user profile', user: req.user})
-// });
+const getAllUsers = asyncHandler(async (req, res) => {
+  // currently returns logged in user as well
+  const filter = { hidden: { $eq: false } };
+  const projection = { _id: 0, firstName: 1, lastName: 1 };
 
-// const deleteUserProfile = asyncHandler(async (req, res) => {
-//   res.json({msg: 'delete user profile', user: req.user})
-// });
+  let users = await User.aggregate([
+    { $match: filter },
+    { $project: projection }
+  ]);
+
+  if (!users) {
+    console.log('call to get all users failed');
+    res.status(400).json({msg: 'failed to get all users'});
+  }
+
+  res.status(200).json(users);
+});
+
+const editUserProfile = asyncHandler(async (req, res) => {
+  const update = req.body;    // the update object needs to be in the correct shape... validation 
+
+  User.findByIdAndUpdate(req.user._id, update, { new: true }, (err, user) => {
+    if (err) {
+      console.log(`Failed to find and update: ${err.message}`);
+      res.status(400).json({ msg: 'failed to edit user' });
+    }
+    console.log('user:');
+    console.log(user);
+    res.status(200).json(user);
+  });
+});
+
+const deleteUserProfile = asyncHandler(async (req, res) => {
+  User.findByIdAndDelete(req.user._id, (err, deletedUser) => {
+    if (err) {
+      console.log(`Failed to delete user: ${err.message}`);
+      res.status(400).json({ msg: 'failed to delete user' });
+    }
+    console.log(`DELETED USER: ${deletedUser.firstName} ${deletedUser.lastName}`);
+    req.user = null;
+    res.status(200).json(deletedUser);
+  })
+});
+
+const hideUserProfile = asyncHandler(async (req, res) => {
+  User.findByIdAndUpdate(req.user._id, { "hidden": true }, { new: true }, (err, user) => {
+    if (err) {
+      console.log(`Failed to hide user: ${err.message}`);
+      res.status(400).json({ msg: 'failed to hide user' });
+    }
+    console.log(`USER HIDDEN: ${user.firstName} ${user.lastName}`);
+    res.status(200).json(user);
+  });
+});
+
+const unhideUserProfile = asyncHandler(async (req, res) => {
+  User.findByIdAndUpdate(req.user._id, { "hidden": false }, { new: true }, (err, user) => {
+    if (err) {
+      console.log(`Failed to unhide user: ${err.message}`);
+      res.status(400).json({ msg: 'failed to unhide user' });
+    }
+    console.log(`USER UNHIDDEN: ${user.firstName} ${user.lastName}`);
+    res.status(200).json(user);
+  });
+});
 
 module.exports = { 
   registerUser, 
   loginUser, 
   getUserProfile,
-  // editUserProfile,
-  // deleteUserProfile
+  getAllUsers,
+  editUserProfile,
+  deleteUserProfile,
+  hideUserProfile,
+  unhideUserProfile
 };

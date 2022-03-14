@@ -34,7 +34,6 @@ const UserSchema = mongoose.Schema({
       type: Number,
       min: 18,
       max:30,
-      required: true
     },
     bio: {
       type: String,
@@ -67,6 +66,7 @@ const UserSchema = mongoose.Schema({
       }
     },
     socials: {
+      twitter: String,
       instagram: String,
       facebook: String,
       linkedin: String,
@@ -92,7 +92,11 @@ const UserSchema = mongoose.Schema({
 
   },
   leads: [{type: mongoose.Schema.Types.ObjectId}],
-  fullAccess: [{type: mongoose.Schema.Types.ObjectId}]
+  fullAccess: [{type: mongoose.Schema.Types.ObjectId}],
+  hidden: {
+    type: Boolean,
+    default: false
+  }
 }, 
 {
   timestamps: true
