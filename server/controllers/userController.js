@@ -5,16 +5,16 @@ const bcrypt = require('bcryptjs');
 
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { firstName, lastName, email, password } = req.body;
+  const { firstName, lastName, eduEmail, password } = req.body;
 
-  // check that all required fields are included
-  if (!firstName || !lastName || !email || !password) {
+  // check that all required fields are included (will need validation)
+  if (!firstName || !lastName || !eduEmail || !password) {
     res.status(400);
     throw new Error('Please add all fields');
   }
 
   // check if user exists
-  const userExists = await User.findOne({ email });
+  const userExists = await User.findOne({ eduEmail });
 
   // error if user already exists
   if (userExists) {
@@ -26,26 +26,35 @@ const registerUser = asyncHandler(async (req, res) => {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   // create a new user document
-  await User.create({
+  const user = await User.create({
     firstName,
     lastName,
-    email,
+    eduEmail,
     password: hashedPassword
-  }, (err, user) => {
-    if (err) throw new Error(err.message);
-    if (user) {
-      res.status(201).json({
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        token: generateToken(user._id)
-      });
-    } else {
-      res.status(400);
-      throw new Error('Invalid user data');
-    }
   });
+
+  res.status(201).json(user);
+
+  // await User.create({
+  //   firstName,
+  //   lastName,
+  //   eduEmail,
+  //   password: hashedPassword
+  // }, (err, user) => {
+  //   if (err) throw new Error(err.message);
+  //   if (user) {
+  //     res.status(201).json({
+  //       _id: user._id,
+  //       firstName: user.firstName,
+  //       lastName: user.lastName,
+  //       eduEmail: user.eduEmail,
+  //       token: generateToken(user._id)
+  //     });
+  //   } else {
+  //     res.status(400);
+  //     throw new Error('Invalid user data');
+  //   }
+  // });
 });
 
 const loginUser = asyncHandler(async (req, res) => {
