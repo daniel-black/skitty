@@ -27,8 +27,7 @@ const UserSchema = mongoose.Schema({
     interestLevel: {type: Number, min: 0, max: 100}
   }]
 }, 
-{
-  timestamps: true
-});
+{timestamps: true}
+);
 
 module.exports = mongoose.model('User', UserSchema);
