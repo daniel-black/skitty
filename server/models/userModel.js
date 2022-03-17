@@ -8,6 +8,7 @@ const UserSchema = mongoose.Schema({
   // useAltEmail:{type: Boolean, default: false},
   phone: {type: String, maxLength: 20},
   password: {type: String, required: true},
+  refreshToken: {type: String},
   university: {type: mongoose.Schema.ObjectId},
   graduated: {type: Boolean},
   graduationYear: {type: Number, min: 2018, max: 2050},
@@ -21,6 +22,7 @@ const UserSchema = mongoose.Schema({
   instagram: {type: String, trim: true, maxLength: 30},
   twitter: {type: String, trim: true, maxLength: 30},  
   hidden: {type: Boolean, default: false},
+  isAdmin: {type: Boolean, default: false},
   paying: {type: Boolean, default: false},
   targetCities: [{
     city: {type: mongoose.Schema.ObjectId},

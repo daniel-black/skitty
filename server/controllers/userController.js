@@ -33,44 +33,34 @@ const registerUser = asyncHandler(async (req, res) => {
     password: hashedPassword
   });
 
+  // don't actually want to return user object
   res.status(201).json(user);
-
-  // await User.create({
-  //   firstName,
-  //   lastName,
-  //   eduEmail,
-  //   password: hashedPassword
-  // }, (err, user) => {
-  //   if (err) throw new Error(err.message);
-  //   if (user) {
-  //     res.status(201).json({
-  //       _id: user._id,
-  //       firstName: user.firstName,
-  //       lastName: user.lastName,
-  //       eduEmail: user.eduEmail,
-  //       token: generateToken(user._id)
-  //     });
-  //   } else {
-  //     res.status(400);
-  //     throw new Error('Invalid user data');
-  //   }
-  // });
 });
 
 const loginUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { eduEmail, password } = req.body;  // need to clean and validate
 
-  // check for user email
-  const user = await User.findOne({ email });
+  // check for user eduEmail
+  const user = await User.findOne({ eduEmail });
 
   // compare credentials
   if (user && (await bcrypt.compare(password, user.password))) {
+    // generate access and refresh tokens
+    const accessToken = generateToken('access', user._id);
+    const refreshToken = generateToken('refresh', user._id);
+
+    // save user document with refreshToken
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    res.status(200);
+    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
     res.json({
       _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
-      email: user.email,
-      token: generateToken(user._id)
+      eduEmail: user.eduEmail,
+      accessToken: accessToken
     });
   } else {
     res.status(400);
@@ -87,7 +77,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
   const filter = { hidden: { $eq: false } };
   const projection = { _id: 0, firstName: 1, lastName: 1 };
 
-  let users = await User.aggregate([
+  const users = await User.aggregate([
     { $match: filter },
     { $project: projection }
   ]);
@@ -115,30 +105,29 @@ const editUserProfile = asyncHandler(async (req, res) => {
 });
 
 const deleteUserProfile = asyncHandler(async (req, res) => {
-  User.findByIdAndDelete(req.user._id, (err, deletedUser) => {
-    if (err) {
-      console.log(`Failed to delete user: ${err.message}`);
-      res.status(400).json({ msg: 'failed to delete user' });
-    }
-    console.log(`DELETED USER: ${deletedUser.firstName} ${deletedUser.lastName}`);
-    req.user = null;
-    res.status(200).json(deletedUser);
-  })
+  const deletedUser = await User.findByIdAndDelete(req.user?._id);
+
+  if (!deletedUser) {
+    res.status(500);
+    throw new Error('Failed to delete user');
+  }
+
+  res.status(200).json(deletedUser);
 });
 
 const hideUserProfile = asyncHandler(async (req, res) => {
-  User.findByIdAndUpdate(req.user._id, { "hidden": true }, { new: true }, (err, user) => {
-    if (err) {
-      console.log(`Failed to hide user: ${err.message}`);
-      res.status(400).json({ msg: 'failed to hide user' });
-    }
-    console.log(`USER HIDDEN: ${user.firstName} ${user.lastName}`);
-    res.status(200).json(user);
-  });
+  const user = User.findByIdAndUpdate(req.user?._id, { "hidden": true }, { new: true });
+
+  if (!user) {
+    res.status(500);
+    throw new Error('User not found');
+  }
+  
+  res.status(200).json({msg: `User (${user.firstName} ${user.firstName}) hidden`});
 });
 
 const unhideUserProfile = asyncHandler(async (req, res) => {
-  User.findByIdAndUpdate(req.user._id, { "hidden": false }, { new: true }, (err, user) => {
+  User.findByIdAndUpdate(req.user?._id, { "hidden": false }, { new: true }, (err, user) => {
     if (err) {
       console.log(`Failed to unhide user: ${err.message}`);
       res.status(400).json({ msg: 'failed to unhide user' });
