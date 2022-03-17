@@ -1,5 +1,5 @@
 const asyncHandler = require('express-async-handler');
-const generateToken = require('../utilities/jwt');
+const { generateToken, _idFromJWT } = require('../utilities/jwt');
 const User = require('../models/userModel');
 const bcrypt = require('bcryptjs');
 
@@ -66,6 +66,31 @@ const loginUser = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error('Invalid credentials');
   } 
+});
+
+const getNewAccessToken = asyncHandler(async (req, res) => {
+  const refreshToken = req.cookies?.refreshToken;
+  const _id = _idFromJWT(refreshToken);
+
+  const user = await User.findById(_id);   
+
+  if (!user) {
+    res.status(500);
+    throw new Error('Failed to find user');
+  }
+
+  console.log(user);
+
+  if (user.refreshToken === refreshToken) {
+    console.log(` refreshToken from mongo: ${user.refreshToken}`);
+    console.log(`refreshToken from cookie: ${refreshToken}`);
+
+    const newAccessToken = generateToken('access', _id);
+    res.status(201).json({accessToken: newAccessToken});
+  }
+
+  res.status(400);
+  throw new Error('Invalid refresh request');
 });
 
 const getUserProfile = asyncHandler(async (req, res) => {
@@ -140,6 +165,7 @@ const unhideUserProfile = asyncHandler(async (req, res) => {
 module.exports = { 
   registerUser, 
   loginUser, 
+  getNewAccessToken,
   getUserProfile,
   getAllUsers,
   editUserProfile,

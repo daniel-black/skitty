@@ -14,4 +14,9 @@ const generateToken = (type, id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {expiresIn: expiryTime});
 }
 
-module.exports = generateToken;
+const _idFromJWT = (token) => jwt.verify(token, process.env.JWT_SECRET).id;
+
+module.exports = { 
+  generateToken,
+  _idFromJWT
+};
