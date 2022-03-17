@@ -1,5 +1,5 @@
 const asyncHandler = require('express-async-handler');
-const { generateToken, _idFromJWT } = require('../utilities/jwt');
+const { generateToken, _idFromJWT, expiryDateFromJWT } = require('../utilities/jwt');
 const User = require('../models/userModel');
 const bcrypt = require('bcryptjs');
 
@@ -40,32 +40,41 @@ const registerUser = asyncHandler(async (req, res) => {
 const loginUser = asyncHandler(async (req, res) => {
   const { eduEmail, password } = req.body;  // need to clean and validate
 
-  // check for user eduEmail
   const user = await User.findOne({ eduEmail });
 
-  // compare credentials
-  if (user && (await bcrypt.compare(password, user.password))) {
-    // generate access and refresh tokens
-    const accessToken = generateToken('access', user._id);
-    const refreshToken = generateToken('refresh', user._id);
+  if (!user) {
+    res.status(400);
+    throw new Error('User not found');
+  }
 
-    // save user document with refreshToken
-    user.refreshToken = refreshToken;
-    await user.save();
+  if (await bcrypt.compare(password, user.password)) {
+    const expiryDate = user.refreshToken ? 1000 * expiryDateFromJWT(user.refreshToken) : 0;   
 
-    res.status(200);
-    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
-    res.json({
-      _id: user._id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      eduEmail: user.eduEmail,
-      accessToken: accessToken
-    });
+    // check if refresh token has expired
+    if (Date.now() < expiryDate) {
+      res.redirect('refresh');
+    } else {
+      // refreshToken has expired, grant new login
+      const accessToken = generateToken('access', user._id);
+      const refreshToken = generateToken('refresh', user._id);
+
+      user.refreshToken = refreshToken;
+      await user.save();
+
+      res.status(200);
+      res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
+      res.json({
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        eduEmail: user.eduEmail,
+        accessToken: accessToken
+      });
+    }
   } else {
     res.status(400);
     throw new Error('Invalid credentials');
-  } 
+  }
 });
 
 const getNewAccessToken = asyncHandler(async (req, res) => {
@@ -79,18 +88,13 @@ const getNewAccessToken = asyncHandler(async (req, res) => {
     throw new Error('Failed to find user');
   }
 
-  console.log(user);
-
   if (user.refreshToken === refreshToken) {
-    console.log(` refreshToken from mongo: ${user.refreshToken}`);
-    console.log(`refreshToken from cookie: ${refreshToken}`);
-
     const newAccessToken = generateToken('access', _id);
     res.status(201).json({accessToken: newAccessToken});
+  } else {
+    res.status(400);
+    throw new Error('Invalid refresh request');
   }
-
-  res.status(400);
-  throw new Error('Invalid refresh request');
 });
 
 const getUserProfile = asyncHandler(async (req, res) => {

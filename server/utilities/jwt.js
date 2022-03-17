@@ -16,7 +16,10 @@ const generateToken = (type, id) => {
 
 const _idFromJWT = (token) => jwt.verify(token, process.env.JWT_SECRET).id;
 
+const expiryDateFromJWT = (token) => jwt.verify(token, process.env.JWT_SECRET).exp;
+
 module.exports = { 
   generateToken,
-  _idFromJWT
+  _idFromJWT,
+  expiryDateFromJWT
 };
