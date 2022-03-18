@@ -4,11 +4,9 @@ const generateToken = (type, id) => {
   let expiryTime;
 
   if (type === 'access') {
-    // expiryTime = 60 * 15;   // 15 minute lifetime for access tokens
-    expiryTime = 40; 
+    expiryTime = 60 * 15;   // 15 minute lifetime for access tokens
   } else if (type === 'refresh') {
-    // expiryTime = '14d';
-    expiryTime = 70; 
+    expiryTime = '17';     // 7 day lifetime for refresh tokens
   } else {
     throw new Error('Invalid token type requested');
   }

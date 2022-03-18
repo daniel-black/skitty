@@ -4,8 +4,6 @@ const UserSchema = mongoose.Schema({
   firstName: {type: String, lowercase: true, trim: true, required: true, maxLength: 25},
   lastName: {type: String, lowercase: true, trim: true, required: true, maxLength: 25},
   eduEmail: {type: String, lowercase:true, trim: true, unique: true, index: true, required: true, maxLength: 40},
-  // altEmail: {type: String, lowercase:true, trim: true, maxLength: 40},
-  // useAltEmail:{type: Boolean, default: false},
   phone: {type: String, maxLength: 20},
   password: {type: String, required: true},
   refreshToken: {type: String},
