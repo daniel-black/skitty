@@ -38,7 +38,7 @@ const registerUser = asyncHandler(async (req, res) => {
   res.status(201).json(user);
 });
 
-const loginUser2 = asyncHandler(async (req, res) => {
+const loginUser = asyncHandler(async (req, res) => {
   // first check that email and password were received
   const { eduEmail, password } = req.body;
   if (!eduEmail || !password) {
@@ -54,96 +54,36 @@ const loginUser2 = asyncHandler(async (req, res) => {
   }
 
   // next, check that passwords match
-  if (await bcrypt.compare(password, user.password)) {
-    const cookieRefreshToken = req.cookies.refreshToken || null;
-
-    if (cookieRefreshToken) {
-      // check if it matches the refreshToken from the database
-      
-      if (cookieRefreshToken === user.refreshToken) {
-        
-        const userRefreshTokenStillValid = checkTokenValidity(user.refreshToken);
-
-        if (userRefreshTokenStillValid) {
-          // redirect and get new accessToken
-          console.log('made it to refresh');
-          res.redirect('refresh');
-        }
-        console.log('did not go through refresh');
-
-      } 
-    } else {
-      // generate new refresh and access tokens
-      const accessToken = generateToken('access', user._id);
-      const refreshToken = generateToken('refresh', user._id);
-
-      user.refreshToken = refreshToken;
-      await user.save();
-
-      res.status(200);
-      res.clearCookie('refreshToken');
-      res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
-      res.json({
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        eduEmail: user.eduEmail,
-        accessToken: accessToken
-      });
-    }
-  } else {
-    // passwords do not match
+  const passwordsMatch = await bcrypt.compare(password, user.password); 
+  if (!passwordsMatch) {
     res.status(400);
     throw new Error('Invalid credentials');
   }
-});
 
-const loginUser = asyncHandler(async (req, res) => {
-  const { eduEmail, password } = req.body;  // need to clean and validate
-
-  const user = await User.findOne({ eduEmail });
-
-  if (!user) {
-    res.status(400);
-    throw new Error('User not found');
+  const cookieRefreshToken = req.cookies.refreshToken || null;
+  if (cookieRefreshToken === user.refreshToken && checkTokenValidity(user.refreshToken)) {
+    res.redirect('refresh');
+    return;
   }
 
-  if (await bcrypt.compare(password, user.password)) {
-    const refreshTokenPresentAndValid = user.refreshToken && checkTokenValidity(user.refreshToken);
+  const accessToken = generateToken('access', user._id);
+  const refreshToken = generateToken('refresh', user._id);
 
-    if (refreshTokenPresentAndValid) {
-      console.log(`refresh token still valid: ${user.refreshToken}`);
-      res.redirect('refresh');  // go get a new accessToken
-    } else {
-      console.log(`refresh expired or nonexistent`);
-      // refreshToken has expired, grant new login
-      const accessToken = generateToken('access', user._id);
-      const refreshToken = generateToken('refresh', user._id);
-      console.log(`refreshToken right after generation: ${refreshToken}`);
+  user.refreshToken = refreshToken;
+  await user.save();
 
-      // Generating a new refreshToken and storing it in DB if user does not already
-      // have a refresh token or it they do have a refreshToken but it has expired
-      user.refreshToken = refreshToken;
-      console.log(`user.refreshToken before save: ${user.refreshToken}`);
-      await user.save();
-      console.log(`user.refreshToken after save: ${user.refreshToken}`);
-
-      res.status(200);
-      res.clearCookie('refreshToken');
-      res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
-      res.json({
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        eduEmail: user.eduEmail,
-        accessToken: accessToken
-      });
-    }
-  } else {
-    res.status(400);
-    throw new Error('Invalid credentials');
-  }
+  res.status(200);
+  res.clearCookie('refreshToken');
+  res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
+  res.json({
+    _id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    eduEmail: user.eduEmail,
+    accessToken: accessToken
+  });
 });
+
 
 const getNewAccessToken = asyncHandler(async (req, res) => {
   // might also want to thow a checkTokenValidity() on this too
@@ -238,7 +178,6 @@ const unhideUserProfile = asyncHandler(async (req, res) => {
 module.exports = { 
   registerUser, 
   loginUser, 
-  loginUser2,
   getNewAccessToken,
   getUserProfile,
   getAllUsers,
