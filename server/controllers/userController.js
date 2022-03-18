@@ -1,7 +1,8 @@
 const asyncHandler = require('express-async-handler');
-const { generateToken, _idFromJWT, expiryDateFromJWT } = require('../utilities/jwt');
+const { generateToken, _idFromJWT, checkTokenValidity } = require('../utilities/jwt');
 const User = require('../models/userModel');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 
 const registerUser = asyncHandler(async (req, res) => {
@@ -37,6 +38,66 @@ const registerUser = asyncHandler(async (req, res) => {
   res.status(201).json(user);
 });
 
+const loginUser2 = asyncHandler(async (req, res) => {
+  // first check that email and password were received
+  const { eduEmail, password } = req.body;
+  if (!eduEmail || !password) {
+    res.status(400);
+    throw new Error('Please add all fields');
+  }
+
+  // next, check if a user exists with that eduEmail
+  const user = await User.findOne({ eduEmail });
+  if (!user) {
+    res.status(400);
+    throw new Error('User not found');
+  }
+
+  // next, check that passwords match
+  if (await bcrypt.compare(password, user.password)) {
+    const cookieRefreshToken = req.cookies.refreshToken || null;
+
+    if (cookieRefreshToken) {
+      // check if it matches the refreshToken from the database
+      
+      if (cookieRefreshToken === user.refreshToken) {
+        
+        const userRefreshTokenStillValid = checkTokenValidity(user.refreshToken);
+
+        if (userRefreshTokenStillValid) {
+          // redirect and get new accessToken
+          console.log('made it to refresh');
+          res.redirect('refresh');
+        }
+        console.log('did not go through refresh');
+
+      } 
+    } else {
+      // generate new refresh and access tokens
+      const accessToken = generateToken('access', user._id);
+      const refreshToken = generateToken('refresh', user._id);
+
+      user.refreshToken = refreshToken;
+      await user.save();
+
+      res.status(200);
+      res.clearCookie('refreshToken');
+      res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
+      res.json({
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        eduEmail: user.eduEmail,
+        accessToken: accessToken
+      });
+    }
+  } else {
+    // passwords do not match
+    res.status(400);
+    throw new Error('Invalid credentials');
+  }
+});
+
 const loginUser = asyncHandler(async (req, res) => {
   const { eduEmail, password } = req.body;  // need to clean and validate
 
@@ -48,20 +109,27 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   if (await bcrypt.compare(password, user.password)) {
-    const expiryDate = user.refreshToken ? 1000 * expiryDateFromJWT(user.refreshToken) : 0;   
+    const refreshTokenPresentAndValid = user.refreshToken && checkTokenValidity(user.refreshToken);
 
-    // check if refresh token has expired
-    if (Date.now() < expiryDate) {
-      res.redirect('refresh');
+    if (refreshTokenPresentAndValid) {
+      console.log(`refresh token still valid: ${user.refreshToken}`);
+      res.redirect('refresh');  // go get a new accessToken
     } else {
+      console.log(`refresh expired or nonexistent`);
       // refreshToken has expired, grant new login
       const accessToken = generateToken('access', user._id);
       const refreshToken = generateToken('refresh', user._id);
+      console.log(`refreshToken right after generation: ${refreshToken}`);
 
+      // Generating a new refreshToken and storing it in DB if user does not already
+      // have a refresh token or it they do have a refreshToken but it has expired
       user.refreshToken = refreshToken;
+      console.log(`user.refreshToken before save: ${user.refreshToken}`);
       await user.save();
+      console.log(`user.refreshToken after save: ${user.refreshToken}`);
 
       res.status(200);
+      res.clearCookie('refreshToken');
       res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true });
       res.json({
         _id: user._id,
@@ -78,6 +146,7 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const getNewAccessToken = asyncHandler(async (req, res) => {
+  // might also want to thow a checkTokenValidity() on this too
   const refreshToken = req.cookies?.refreshToken;
   const _id = _idFromJWT(refreshToken);
 
@@ -169,6 +238,7 @@ const unhideUserProfile = asyncHandler(async (req, res) => {
 module.exports = { 
   registerUser, 
   loginUser, 
+  loginUser2,
   getNewAccessToken,
   getUserProfile,
   getAllUsers,

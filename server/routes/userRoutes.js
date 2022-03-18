@@ -4,6 +4,7 @@ const router = express.Router();
 const { 
   registerUser, 
   loginUser, 
+  loginUser2,
   getNewAccessToken,
   getUserProfile,
   getAllUsers,
@@ -16,6 +17,7 @@ const {
   
 router.post('/', registerUser);
 router.post('/login', loginUser);
+router.post('/login2', loginUser2);
 router.get('/refresh', getNewAccessToken);
 router.get('/profile', protect, getUserProfile);
 router.get('/allUsers', protect, getAllUsers);
