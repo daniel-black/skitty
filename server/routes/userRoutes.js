@@ -9,8 +9,8 @@ const {
   getAllUsers,
   editUserProfile,
   deleteUserProfile,
-  hideUserProfile,
-  unhideUserProfile
+  toggleProfileVisibility,
+  logoutUser
  } = require('../controllers/userController');
 
   
@@ -20,8 +20,8 @@ router.get('/refresh', getNewAccessToken);
 router.get('/profile', protect, getUserProfile);
 router.get('/allUsers', protect, getAllUsers);
 router.patch('/edit', protect, editUserProfile);
-router.patch('/hide', protect, hideUserProfile);
-router.patch('/unhide', protect, unhideUserProfile);
+router.patch('/toggleHide', protect, toggleProfileVisibility);
+router.patch('/logout', protect, logoutUser);
 router.delete('/delete', protect, deleteUserProfile);
 
 

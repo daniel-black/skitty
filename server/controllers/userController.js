@@ -2,7 +2,6 @@ const asyncHandler = require('express-async-handler');
 const { generateToken, _idFromJWT, checkTokenValidity } = require('../utilities/jwt');
 const User = require('../models/userModel');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 
 
 const registerUser = asyncHandler(async (req, res) => {
@@ -88,8 +87,14 @@ const loginUser = asyncHandler(async (req, res) => {
 const getNewAccessToken = asyncHandler(async (req, res) => {
   // might also want to thow a checkTokenValidity() on this too
   const refreshToken = req.cookies?.refreshToken;
-  const _id = _idFromJWT(refreshToken);
+  const validRefreshToken = checkTokenValidity(refreshToken);
+  
+  if (!validRefreshToken) {
+    res.status(400);
+    throw new Error('Invalid refresh token');
+  }
 
+  const _id = _idFromJWT(refreshToken);
   const user = await User.findById(_id);   
 
   if (!user) {
@@ -97,13 +102,13 @@ const getNewAccessToken = asyncHandler(async (req, res) => {
     throw new Error('Failed to find user');
   }
 
-  if (user.refreshToken === refreshToken) {
-    const newAccessToken = generateToken('access', _id);
-    res.status(201).json({accessToken: newAccessToken});
-  } else {
+  if (user.refreshToken !== refreshToken) {
     res.status(400);
     throw new Error('Invalid refresh request');
   }
+
+  const newAccessToken = generateToken('access', _id);
+  res.status(201).json({accessToken: newAccessToken});
 });
 
 const getUserProfile = asyncHandler(async (req, res) => {
@@ -133,11 +138,8 @@ const editUserProfile = asyncHandler(async (req, res) => {
 
   User.findByIdAndUpdate(req.user._id, update, { new: true }, (err, user) => {
     if (err) {
-      console.log(`Failed to find and update: ${err.message}`);
       res.status(400).json({ msg: 'failed to edit user' });
     }
-    console.log('user:');
-    console.log(user);
     res.status(200).json(user);
   });
 });
@@ -153,26 +155,29 @@ const deleteUserProfile = asyncHandler(async (req, res) => {
   res.status(200).json(deletedUser);
 });
 
-const hideUserProfile = asyncHandler(async (req, res) => {
-  const user = User.findByIdAndUpdate(req.user?._id, { "hidden": true }, { new: true });
 
+const logoutUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
   if (!user) {
     res.status(500);
     throw new Error('User not found');
   }
-  
-  res.status(200).json({msg: `User (${user.firstName} ${user.firstName}) hidden`});
+  user.refreshToken = '';
+  await user.save();
+  res.status(200).json({msg: `Logged out ${user.firstName}`});
 });
 
-const unhideUserProfile = asyncHandler(async (req, res) => {
-  User.findByIdAndUpdate(req.user?._id, { "hidden": false }, { new: true }, (err, user) => {
-    if (err) {
-      console.log(`Failed to unhide user: ${err.message}`);
-      res.status(400).json({ msg: 'failed to unhide user' });
-    }
-    console.log(`USER UNHIDDEN: ${user.firstName} ${user.lastName}`);
-    res.status(200).json(user);
-  });
+
+const toggleProfileVisibility = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user?._id);
+  if (!user) {
+    res.status(500);
+    throw new Error('User not found');
+  }
+  console.log(user);
+  user.hidden = !user.hidden;
+  await user.save();
+  res.status(200).json(user);
 });
 
 module.exports = { 
@@ -183,6 +188,6 @@ module.exports = {
   getAllUsers,
   editUserProfile,
   deleteUserProfile,
-  hideUserProfile,
-  unhideUserProfile
+  toggleProfileVisibility,
+  logoutUser
 };
